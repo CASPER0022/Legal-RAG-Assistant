@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  redis:
+    image: redis:7
+    command: ["redis-server","--appendonly","yes"]
+    ports: ["6379:6379"]
+  neo4j:
+    image: neo4j:5
+    ports: ["7474:7474","7687:7687"]
+    environment:
+      - NEO4J_AUTH=neo4j/test123
+    volumes:
+      - neo4j_data:/data
+volumes:
+  neo4j_data:

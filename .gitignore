@@ -1,0 +1,20 @@
+# Python virtual environment
+.venv/
+venv/
+
+# VS Code settings
+.vscode/
+
+# ChromaDB vector database directory
+data/vec/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
