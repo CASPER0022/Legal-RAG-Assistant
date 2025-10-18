@@ -18,9 +18,20 @@ def load_text_dir(p):
     texts = []
     for fp in Path(p).glob("**/*"):
         if fp.suffix.lower() in [".txt", ".md", ".pdf"]:
-            # super simple loader: read txt/md; for pdf just skip for now or paste text 
-            if fp.suffix.lower() in [".txt", ".md"]:
-                texts.append(fp.read_text(encoding="utf-8", errors="ignore"))
+            try:
+                if fp.suffix.lower() in [".txt", ".md"]:
+                    texts.append(fp.read_text(encoding="utf-8", errors="ignore"))
+                elif fp.suffix.lower() == ".pdf":
+                    # extract pdf text using PyPDF2
+                    import PyPDF2
+                    with open(fp, "rb") as f:
+                        reader = PyPDF2.PdfReader(f)
+                        pages = []
+                        for pg in reader.pages:
+                            pages.append(pg.extract_text() or "")
+                        texts.append("\n".join(pages))
+            except Exception as e:
+                print(f"failed to read {fp}: {e}")
     return texts
 
 def main():
@@ -31,9 +42,15 @@ def main():
 
     # 1) text
     docs = load_text_dir("kb/text")
+    print(f"found {len(docs)} documents in kb/text")
+    for i,d in enumerate(docs):
+        print(f" doc {i} length: {len(d)} chars")
+
     chunks = []
     for d in docs:
         chunks += chunk_text(d)
+
+    print(f"total chunks to ingest: {len(chunks)}")
 
     # 2) images → TODO: caption later; for now, skip or store filenames as "captions"
     # for img in Path("kb/images").glob("*"):
