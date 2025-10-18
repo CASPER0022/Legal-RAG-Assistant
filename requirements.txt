@@ -1,0 +1,6 @@
+sentence-transformers
+chromadb
+PyPDF2
+redis
+openai
+torch
