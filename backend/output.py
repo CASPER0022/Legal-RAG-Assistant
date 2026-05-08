@@ -208,7 +208,14 @@ Important: If an article number, section number, or penalty is not present in th
 
     if parsed is not None:
         return parsed
-    #fallback: return raw text under a key
+    
+    # fallback: try to regex extract the "answer" string if it's a broken JSON
+    m = re.search(r'"answer"\s*:\s*"([\s\S]*?)"\s*(?:,"legal_terms"|,"relevant_articles"|,"confidence"|\})', answer_text)
+    if m:
+        extracted = m.group(1).replace('\\n', '\n').replace('\\"', '"')
+        return {"answer": extracted, "confidence": "low (parse error)", "legal_terms": [], "relevant_articles": []}
+
+    # complete fallback: return raw text under a key
     return {"answer_text": answer_text}
 
 if __name__ == "__main__":

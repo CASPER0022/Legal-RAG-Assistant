@@ -172,7 +172,21 @@ function AssistantResponse({ raw, fallbackContent }) {
 
   if (!raw) return null;
 
-  const answer = raw.answer || raw.answer_text || "No answer found.";
+  let answer = raw.answer || raw.answer_text || "No answer found.";
+
+  // Quick fallback cleanup if backend sent a raw JSON string instead of parsed JSON
+  if (typeof answer === 'string' && answer.trim().startsWith('{') && answer.includes('"answer"')) {
+    try {
+      const parsed = JSON.parse(answer);
+      if (parsed.answer) answer = parsed.answer;
+    } catch (e) {
+      const match = answer.match(/"answer"\s*:\s*"([\s\S]*?)"\s*(?:,"|\})/);
+      if (match) {
+        answer = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+      }
+    }
+  }
+
   const legalTerms = raw.legal_terms || [];
   const relevantArticles = raw.relevant_articles || [];
   const confidence = raw.confidence || (raw.answer_text ? "high" : "Unknown");
