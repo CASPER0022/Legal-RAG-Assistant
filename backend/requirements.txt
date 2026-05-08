@@ -9,3 +9,5 @@ rank_bm25
 flashrank
 ragas
 pandas
+fastapi
+uvicorn
