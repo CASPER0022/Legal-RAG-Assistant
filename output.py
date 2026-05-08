@@ -1,6 +1,6 @@
 import os
+import requests
 from dotenv import load_dotenv
-from openai import OpenAI
 from retriever import retrieve
 import json
 from typing import List, Dict, Any
@@ -10,7 +10,9 @@ import shutil
 
 #Load API key from .env file
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
+OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "https://ollama.com/api/generate")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:120b")
 HISTORY_PATH = "chat_history.json"
 HISTORY_MAX_EXCHANGES = 3
 SESSION_HISTORY: List[Dict[str, str]] = []
@@ -118,17 +120,25 @@ def generate_answer(query: str):
     #Ask the model to answer based on context. Request structured JSON
     #The assistant must ONLY use the provided context and must return a JSON object.
     prompt = f"""
-You are a legal research assistant. Use ONLY the provided context (do not hallucinate new laws). ALWAYS REPLY LIKE HOW WE CAN DO? HOW MANY YEARS PENALTY, TALK LIKE AN ADVOCATE
+You are an elite, highly experienced Trial Advocate and Legal Counsel. Analyze the provided context and deliver authoritative, powerful legal advice directly to your client.
 
-Return a single JSON object (no surrounding explanation) with the following schema:
+Speak with the voice, confidence, and dramatic flair of a seasoned courtroom attorney. Do not use generic or passive language. Speak directly to the client ("My dear client...", "We shall file...", "Under the law, we can...").
+
+Your advice MUST:
+1. State the exact, specific legal steps "we" will take on behalf of the client (e.g., filing a complaint before the Sub-divisional Magistrate).
+2. Cite the exact Section/Article numbers found in the context (e.g., Section 152 of the Bharatiya Nagarik Suraksha Sanhita (BNSS), 2023).
+3. State the exact consequences, jail time, or fines the offending party will face if they disobey or commit the offense, as detailed in the context (e.g., liability under Section 223 of the Bharatiya Nyaya Sanhita (BNS), 2023, or imprisonment up to 6 months under Section 293 of the BNS).
+4. Be beautifully formatted in highly readable Markdown. Use clear paragraphs, bold sub-headers, and numbered/bulleted lists to organize our strategic plan. NEVER output a single giant wall of text.
+
+Return a single JSON object (no surrounding explanation) matching this exact schema:
 
 {{
-  "answer": "Short, plain-language answer to the question (1-3 sentences)",
+  "answer": "Your detailed legal advice, written with the authoritative, assertive tone of an advocate. It MUST be beautifully formatted in structured, premium Markdown with clear line breaks, bold headings (e.g., ### Strategy), and clean bullet points. Outline our plan step-by-step, specify the relevant Sections, and clearly detail the penalties, jail time, or fines. Do NOT output a single wall of text.",
   "legal_terms": [
-    {{"term": "Legal term or phrase found in context", "article": "Article number or citation (if found)", "quote": "Exact excerpt from the context proving this", "source": "source filename or id"}}
+    {{"term": "Legal term or phrase found in context", "article": "Article number or citation (e.g., Section 152 of the BNSS)", "quote": "Exact excerpt from the context proving this", "source": "source filename or id"}}
   ],
   "relevant_articles": [
-    {{"article": "Article number or identifier", "reason": "Why this article is relevant (1-2 sentences)"}}
+    {{"article": "Article number or identifier (e.g., Section 152 of the BNSS)", "reason": "Why this article is relevant to our case and what it empowers us to do"}}
   ],
   "confidence": "low|medium|high (based on how directly the context proves the answer)"
 }}
@@ -139,20 +149,40 @@ Context:
 Question:
 {query}
 
-Important: If an article number or legal term is not present in the context, do NOT invent it — leave the field empty or omit that list item.
+Important: If an article number, section number, or penalty is not present in the provided context, do NOT invent or hallucinate it. Only extract and present what is in the text.
     """
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini", 
-        messages=[
-            {"role": "system", "content": "You are a legal assistant specialized in extracting laws and citations from provided text. Answer in JSON as requested."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.0,
-        max_tokens=900,
-    )
+    headers = {
+        "Content-Type": "application/json"
+    }
+    if OLLAMA_API_KEY:
+        headers["Authorization"] = f"Bearer {OLLAMA_API_KEY}"
 
-    answer_text = response.choices[0].message.content.strip()
+    payload = {
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "system": "You are a legal assistant specialized in extracting laws and citations from provided text. Answer in JSON as requested.",
+        "stream": False,
+        "format": "json",
+        "options": {
+            "temperature": 0.0,
+            "num_predict": 2048
+        }
+    }
+
+    try:
+        response = requests.post(OLLAMA_API_URL, json=payload, headers=headers, timeout=60)
+        response.raise_for_status()
+        res_json = response.json()
+        answer_text = res_json.get("response", "").strip()
+    except Exception as e:
+        return {
+            "answer": f"Error calling Ollama API: {e}",
+            "legal_terms": [],
+            "relevant_articles": [],
+            "sources": [],
+            "confidence": "low",
+        }
 
     #Try to parse structured JSON from the assistant
     parsed: Any = None

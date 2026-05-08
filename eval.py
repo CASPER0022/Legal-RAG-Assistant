@@ -80,6 +80,6 @@ def run_evaluation():
     print("\nResults saved to rag_evaluation_results.csv")
 
 if __name__ == "__main__":
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Warning: OPENAI_API_KEY not found. Ragas metrics may fail.")
+    if not os.getenv("OLLAMA_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+        print("Warning: OLLAMA_API_KEY or OPENAI_API_KEY not found. Ragas or Ollama calls may fail.")
     run_evaluation()

@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 from typing import List, Dict, Any
-from output import generate_answer
+from output import generate_answer, OLLAMA_MODEL
 
 def local_css(file_name):
     with open(file_name) as f:
@@ -69,15 +69,15 @@ def main():
             
         st.markdown("---")
         st.subheader("Metrics (Live)")
-        st.metric("Model", "GPT-4o-mini")
+        st.metric("Model", OLLAMA_MODEL)
         st.metric("Retrieval", "Hybrid + Rerank")
         
         with st.expander("About LegalEase"):
-            st.write("""
+            st.write(f"""
                 LegalEase uses state-of-the-art Retrieval Augmented Generation (RAG) to provide accurate legal guidance.
                 - **Dense Retrieval**: Sentence Transformers
                 - **Re-ranking**: FlashRank (Cross-Encoders)
-                - **LLM**: GPT-4o-mini
+                - **LLM**: {OLLAMA_MODEL}
             """)
 
     # Chat display
@@ -88,7 +88,8 @@ def main():
             else:
                 raw = msg.get("raw")
                 if isinstance(raw, dict):
-                    st.markdown(f"### Answer\n{raw.get('answer', 'No answer found.')}")
+                    answer = raw.get("answer") or raw.get("answer_text") or "No answer found."
+                    st.markdown(f"### Answer\n{answer}")
                     
                     if raw.get("legal_terms"):
                         st.markdown("#### 📚 Relevant Legal Terms")
@@ -106,7 +107,8 @@ def main():
                             for art in raw["relevant_articles"]:
                                 st.markdown(f"**{art.get('article')}**: {art.get('reason')}")
                     
-                    st.caption(f"Confidence Level: {raw.get('confidence', 'Unknown')}")
+                    confidence = raw.get("confidence") or ("high" if "answer_text" in raw else "Unknown")
+                    st.caption(f"Confidence Level: {confidence}")
                 else:
                     st.write(msg["content"])
 

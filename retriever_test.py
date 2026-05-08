@@ -3,18 +3,9 @@ from retriever import retrieve
 # result = retrieve("""sections 473 and 474""")
 # print(result)
 
-from openai import OpenAI
-client = OpenAI()
+from output import generate_answer
 
-result = retrieve("who is albin john")
-context = "\n".join(result["docs"])
-
-completion = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": f"Based on the following context, answer clearly: {context}\n\nWho is Albin John?"}
-    ]
-)
-
-print(completion.choices[0].message.content)
+ans = generate_answer("my neighbour is throwing waste in my area, what should I do?")
+import json
+print("Response from Ollama:")
+print(json.dumps(ans, indent=2, ensure_ascii=True))

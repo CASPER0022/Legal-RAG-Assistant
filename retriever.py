@@ -13,7 +13,7 @@ model = SentenceTransformer(EMB_MODEL)
 # ms-marco-MiniLM-L-12-v2 is a good balance of speed and accuracy
 ranker = Ranker(model_name="ms-marco-MiniLM-L-12-v2", cache_dir="data/flashrank")
 
-def retrieve(query: str, k: int = 10, rerank_k: int = 4):
+def retrieve(query: str, k: int = 25, rerank_k: int = 8):
     """
     Hybrid-ready retrieval with re-ranking.
     1. Vector search for top-k candidates.

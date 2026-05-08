@@ -5,8 +5,8 @@ venv/
 # VS Code settings
 .vscode/
 
-# ChromaDB vector database directory
-data/vec/
+# Local data directory (ChromaDB, flashrank models, etc.)
+data/
 
 # Python cache
 __pycache__/

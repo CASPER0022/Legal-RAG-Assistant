@@ -2,7 +2,7 @@ sentence-transformers
 chromadb
 PyPDF2
 redis
-openai
+requests
 torch
 langchain-text-splitters
 rank_bm25
