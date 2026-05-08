@@ -4,3 +4,8 @@ PyPDF2
 redis
 openai
 torch
+langchain-text-splitters
+rank_bm25
+flashrank
+ragas
+pandas

@@ -1,154 +1,130 @@
 import streamlit as st
 import json
 from typing import List, Dict, Any
-
-# Import your core function
 from output import generate_answer
 
-
-def format_parsed_result(parsed: Dict[str, Any]) -> str:
-    lines: List[str] = []
-    answer = parsed.get("answer") or parsed.get("answer_text") or "(no answer)"
-    lines.append("Answer:")
-    lines.append(f"  {answer}")
-    lines.append("")
-
-    lterms = parsed.get("legal_terms") or []
-    lines.append("Legal terms found:")
-    if lterms:
-        for lt in lterms:
-            term = lt.get("term", "")
-            article = lt.get("article", "")
-            quote = lt.get("quote", "")
-            source = lt.get("source", "")
-            lines.append(f"- {term}")
-            if article:
-                lines.append(f"    Article: {article}")
-            if source:
-                lines.append(f"    Source: {source}")
-            if quote:
-                qshort = quote.strip().replace("\n", " ")
-                if len(qshort) > 300:
-                    qshort = qshort[:297] + "..."
-                lines.append(f"    Quote: {qshort}")
-            lines.append("")
-    else:
-        lines.append("  None found")
-        lines.append("")
-
-    rarts = parsed.get("relevant_articles") or []
-    lines.append("Relevant articles:")
-    if rarts:
-        for ra in rarts:
-            art = ra.get("article", "")
-            reason = ra.get("reason", "")
-            lines.append(f"- {art}: {reason}")
-        lines.append("")
-    else:
-        lines.append("  None found")
-        lines.append("")
-
-    # Note: 'sources' are intentionally omitted from the UI per user request.
-    conf = parsed.get("confidence")
-    if conf:
-        lines.append(f"Confidence: {conf}")
-
-    return "\n".join(lines)
-
+def local_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(page_title="Legal Ease Chat", layout="wide")
-    st.title("Legal Ease — Chat")
+    st.set_page_config(
+        page_title="LegalEase AI",
+        page_icon="⚖️",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
 
-    # Initialize session-only history: list of messages {role: 'user'|'assistant', 'content': str, 'raw': any}
+    # Custom CSS for Premium Look
+    st.markdown("""
+        <style>
+        .main {
+            background-color: #0e1117;
+        }
+        .stChatMessage {
+            background-color: #1e2227;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #30363d;
+        }
+        .stMarkdown h1 {
+            color: #58a6ff;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+        }
+        .legal-card {
+            background-color: #161b22;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid #238636;
+            margin-bottom: 10px;
+        }
+        .legal-term {
+            color: #d2a8ff;
+            font-weight: bold;
+        }
+        .legal-article {
+            color: #79c0ff;
+            font-size: 0.9em;
+        }
+        .sidebar .sidebar-content {
+            background-color: #161b22;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.title("⚖️ LegalEase — RAG Advisor")
+    st.markdown("---")
+
     if "history" not in st.session_state:
         st.session_state.history = []
 
-    # Sidebar controls
     with st.sidebar:
-        st.header("Controls")
-        if st.button("New chat"):
+        st.header("🛠️ Dashboard")
+        st.info("Advanced RAG: Hybrid Search + FlashRank Reranking enabled.")
+        
+        if st.button("🆕 New Conversation", use_container_width=True):
             st.session_state.history = []
-        if st.button("Clear stored history file"):
-            try:
-                import os
-
-                if os.path.exists("chat_history.json"):
-                    os.replace("chat_history.json", "chat_history.json.bak")
-                    st.success("Moved existing chat_history.json to chat_history.json.bak")
-                else:
-                    st.info("No chat_history.json found on disk.")
-            except Exception as e:
-                st.error(f"Could not clear history file: {e}")
-
+            st.rerun()
+            
         st.markdown("---")
-        st.write("This interface keeps chat history only for the current session. Use New chat to start fresh.")
+        st.subheader("Metrics (Live)")
+        st.metric("Model", "GPT-4o-mini")
+        st.metric("Retrieval", "Hybrid + Rerank")
+        
+        with st.expander("About LegalEase"):
+            st.write("""
+                LegalEase uses state-of-the-art Retrieval Augmented Generation (RAG) to provide accurate legal guidance.
+                - **Dense Retrieval**: Sentence Transformers
+                - **Re-ranking**: FlashRank (Cross-Encoders)
+                - **LLM**: GPT-4o-mini
+            """)
 
-    # Chat area: render prior messages in order
-    chat_placeholder = st.container()
-
-    with chat_placeholder:
-        for msg in st.session_state.history:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-            raw = msg.get("raw")
-            # Use streamlit chat components
-            if role == "user":
-                with st.chat_message("user"):
-                    st.write(content)
+    # Chat display
+    for msg in st.session_state.history:
+        with st.chat_message(msg["role"]):
+            if msg["role"] == "user":
+                st.write(msg["content"])
             else:
-                with st.chat_message("assistant"):
-                    if isinstance(raw, dict):
-                        # formatted view, plus expander for raw json (hide 'sources' field)
-                        st.markdown("""
-**Assistant (structured):**
-""")
-                        st.code(format_parsed_result(raw))
-                        with st.expander("Raw JSON"):
-                            raw_copy = dict(raw)
-                            raw_copy.pop("sources", None)
-                            st.json(raw_copy)
-                    else:
-                        st.write(content)
+                raw = msg.get("raw")
+                if isinstance(raw, dict):
+                    st.markdown(f"### Answer\n{raw.get('answer', 'No answer found.')}")
+                    
+                    if raw.get("legal_terms"):
+                        st.markdown("#### 📚 Relevant Legal Terms")
+                        for term in raw["legal_terms"]:
+                            st.markdown(f"""
+                                <div class="legal-card">
+                                    <span class="legal-term">{term.get('term', 'N/A')}</span><br/>
+                                    <span class="legal-article">Citation: {term.get('article', 'N/A')}</span><br/>
+                                    <p style='font-style: italic; color: #8b949e; font-size: 0.9em;'>"{term.get('quote', '')}"</p>
+                                </div>
+                            """, unsafe_allow_html=True)
+                            
+                    if raw.get("relevant_articles"):
+                        with st.expander("📖 View Referenced Articles"):
+                            for art in raw["relevant_articles"]:
+                                st.markdown(f"**{art.get('article')}**: {art.get('reason')}")
+                    
+                    st.caption(f"Confidence Level: {raw.get('confidence', 'Unknown')}")
+                else:
+                    st.write(msg["content"])
 
-    # Input using chat_input for native ChatGPT-like behavior
-    user_input = st.chat_input("Type your question and press Enter...")
+    # Chat Input
+    user_input = st.chat_input("Ask a legal question...")
     if user_input:
-        # append user message so it shows immediately in the chat area
-        st.session_state.history.append({"role": "user", "content": user_input, "raw": None})
+        st.session_state.history.append({"role": "user", "content": user_input})
+        with st.chat_message("user"):
+            st.write(user_input)
 
-        # create an assistant placeholder immediately so the user sees feedback
         with st.chat_message("assistant"):
-            placeholder = st.empty()
-            placeholder.info("Thinking...")
-
-        # call the heavy function (blocks) and then update the placeholder in-place
-        try:
-            resp = generate_answer(user_input)
-        except Exception as e:
-            resp = {"answer_text": f"Error: {e}"}
-
-        # replace placeholder with final assistant content
-        if isinstance(resp, dict):
-            assistant_content = resp.get("answer") or resp.get("answer_text") or "(no answer)"
-            # update placeholder with formatted structured output
-            try:
-                placeholder.code(format_parsed_result(resp))
-                # also show raw JSON below inside the same placeholder area
-                with st.expander("Raw JSON"):
-                    st.json(resp)
-            except Exception:
-                placeholder.write(assistant_content)
-
-            # store into session history
-            st.session_state.history.append({"role": "assistant", "content": assistant_content, "raw": resp})
-        else:
-            assistant_content = str(resp)
-            placeholder.write(assistant_content)
-            st.session_state.history.append({"role": "assistant", "content": assistant_content, "raw": None})
-
-        # Streamlit will re-run and render full chat history including this new assistant message
-
+            with st.spinner("Analyzing legal documents and re-ranking results..."):
+                try:
+                    resp = generate_answer(user_input)
+                    st.session_state.history.append({"role": "assistant", "content": "", "raw": resp})
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error generating answer: {e}")
 
 if __name__ == "__main__":
     main()

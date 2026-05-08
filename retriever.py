@@ -1,29 +1,52 @@
 import chromadb, os
 from sentence_transformers import SentenceTransformer
-from cache import get_or_set
+from flashrank import Ranker, RerankRequest
+import numpy as np
 
 EMB_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-DB_DIR = "data/vec"; COLL = "kb_chunks"
+DB_DIR = "data/vec"
+COLL = "kb_chunks"
 
 client = chromadb.PersistentClient(path=DB_DIR)
 coll = client.get_or_create_collection(COLL)
 model = SentenceTransformer(EMB_MODEL)
+# ms-marco-MiniLM-L-12-v2 is a good balance of speed and accuracy
+ranker = Ranker(model_name="ms-marco-MiniLM-L-12-v2", cache_dir="data/flashrank")
 
-def retrieve(query:str, k:int=4):
-    def _compute():
-        qv = model.encode([query], normalize_embeddings=True).tolist()[0]
-        res = coll.query(query_embeddings=[qv], n_results=k)
-        docs = res.get("documents", [[]])[0]
-        return {"docs": docs}
-    #return get_or_set("retrieval", {"q":query, "k":k}, _compute) DO WHEN REDIS IS RUNNING
-    return _compute()
+def retrieve(query: str, k: int = 10, rerank_k: int = 4):
+    """
+    Hybrid-ready retrieval with re-ranking.
+    1. Vector search for top-k candidates.
+    2. Re-rank top candidates using a cross-encoder (FlashRank).
+    """
+    # 1. Vector Search (Dense)
+    qv = model.encode([query], normalize_embeddings=True).tolist()[0]
+    res = coll.query(query_embeddings=[qv], n_results=k)
+    
+    documents = res.get("documents", [[]])[0]
+    metadatas = res.get("metadatas", [[]])[0]
+    
+    if not documents:
+        return {"docs": [], "metadatas": [], "scores": []}
 
-# This code is your search layer:
+    # Prepare for FlashRank
+    passages = []
+    for i, doc in enumerate(documents):
+        passages.append({
+            "id": i,
+            "text": doc,
+            "meta": metadatas[i]
+        })
 
-# You give it a natural language query (like “what is Python?”).
-
-# It converts that query into a vector embedding.
-
-# It asks ChromaDB to find the most similar chunks in your knowledge base.
-
-# It wraps the whole thing in a Redis cache so repeated queries are faster.
+    # 2. Re-ranking
+    rerankrequest = RerankRequest(query=query, passages=passages)
+    results = ranker.rerank(rerankrequest)
+    
+    # Take top rerank_k
+    top_results = results[:rerank_k]
+    
+    return {
+        "docs": [r["text"] for r in top_results],
+        "metadatas": [r["meta"] for r in top_results],
+        "scores": [float(r["score"]) for r in top_results]
+    }

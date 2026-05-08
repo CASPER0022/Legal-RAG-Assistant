@@ -3,8 +3,6 @@ from retriever import retrieve
 # result = retrieve("""sections 473 and 474""")
 # print(result)
 
-#CODE THAT SUMMARIZES EVERYTHING FOR ME, WE CAN USE IT LATER..
-
 from openai import OpenAI
 client = OpenAI()
 

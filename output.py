@@ -8,7 +8,7 @@ import re
 import datetime
 import shutil
 
-# Load API key from .env file
+#Load API key from .env file
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 HISTORY_PATH = "chat_history.json"
@@ -71,14 +71,14 @@ def init_session():
             if ans in ("y", "yes"):
                 SESSION_HISTORY = data
                 return
-            # user chose not to continue -> back up the old history and start fresh
+            #user chose not to continue -> back up the old history and start fresh
             try:
                 stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
                 backup_name = f"{HISTORY_PATH}.bak.{stamp}"
-                shutil.move(HISTORY_PATH, backup_name)
+                shutil.move(HISTORY_PATH, backup_name) 
                 print(f"Backed up old history to {backup_name}")
             except Exception:
-                # if backup fails, try to remove the file to avoid reloading it
+                #if backup fails, try to remove the file to avoid reloading it
                 try:
                     os.remove(HISTORY_PATH)
                 except Exception:
@@ -87,20 +87,36 @@ def init_session():
     SESSION_HISTORY = []
 
 def generate_answer(query: str):
-    # Step 1: Retrieve relevant docs from Chroma
+    #Retrieve relevant docs from Chroma
     results = retrieve(query)
     docs = results["docs"]
 
-    # Step 2: Combine retrieved chunks as context
-    context = "\n\n".join(docs)
+    #If retrieval returned no documents, don't call the model — avoid hallucination.
+    if not docs:
+        return {
+            "answer": "No relevant documents were found in the knowledge base for your query. Please add documents to `kb/text` or rephrase your question.",
+            "legal_terms": [],
+            "relevant_articles": [],
+            "sources": [],
+            "confidence": "low",
+        }
 
-    # Step 2.5: include recent exchanges from the in-memory session (if any)
+    #Combine retrieved chunks as context with source attribution
+    context_parts = []
+    metadatas = results.get("metadatas", [])
+    for i, doc in enumerate(docs):
+        source = metadatas[i].get("source", "Unknown") if i < len(metadatas) else "Unknown"
+        context_parts.append(f"[Source: {source}]\n{doc}")
+    
+    context = "\n\n".join(context_parts)
+
+    #include recent exchanges from the in-memory session (if any)
     prev_context = get_recent_context(SESSION_HISTORY)
     if prev_context:
-        context = prev_context + "\n\nPrevious retrieval context:\n" + context
+        context = prev_context + "\n\nPrevious conversation history:\n" + context
 
-    # Step 3: Ask the model to answer based on context. Request structured JSON
-    # The assistant must ONLY use the provided context and must return a JSON object.
+    #Ask the model to answer based on context. Request structured JSON
+    #The assistant must ONLY use the provided context and must return a JSON object.
     prompt = f"""
 You are a legal research assistant. Use ONLY the provided context (do not hallucinate new laws). ALWAYS REPLY LIKE HOW WE CAN DO? HOW MANY YEARS PENALTY, TALK LIKE AN ADVOCATE
 
@@ -127,7 +143,7 @@ Important: If an article number or legal term is not present in the context, do 
     """
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",  # or gpt-4-turbo / gpt-3.5-turbo
+        model="gpt-4o-mini", 
         messages=[
             {"role": "system", "content": "You are a legal assistant specialized in extracting laws and citations from provided text. Answer in JSON as requested."},
             {"role": "user", "content": prompt},
@@ -138,12 +154,12 @@ Important: If an article number or legal term is not present in the context, do 
 
     answer_text = response.choices[0].message.content.strip()
 
-    # Try to parse structured JSON from the assistant
+    #Try to parse structured JSON from the assistant
     parsed: Any = None
     try:
         parsed = json.loads(answer_text)
     except Exception:
-        # try to extract the first JSON object in the text
+        #try to extract the first JSON object in the text
         m = re.search(r"\{[\s\S]*\}", answer_text)
         if m:
             try:
@@ -151,7 +167,7 @@ Important: If an article number or legal term is not present in the context, do 
             except Exception:
                 parsed = None
 
-    # persist this exchange in the session and on disk (store raw assistant text)
+    #persist this exchange in the session and on disk (store raw assistant text)
     try:
         SESSION_HISTORY.append({"user": query, "assistant": answer_text})
         if len(SESSION_HISTORY) > 50:
@@ -162,20 +178,20 @@ Important: If an article number or legal term is not present in the context, do 
 
     if parsed is not None:
         return parsed
-    # fallback: return raw text under a key
+    #fallback: return raw text under a key
     return {"answer_text": answer_text}
 
 if __name__ == "__main__":
     def format_parsed_result(parsed: Dict[str, Any]) -> str:
         """Return a human-readable string for the parsed JSON result."""
         lines: List[str] = []
-        # Answer
+        #Answer
         answer = parsed.get("answer") or parsed.get("answer_text") or "(no answer)"
         lines.append("Answer:")
         lines.append(f"  {answer}")
         lines.append("")
 
-        # Legal terms
+        #Legal terms
         lterms = parsed.get("legal_terms") or []
         lines.append("Legal terms found:")
         if lterms:
@@ -190,7 +206,7 @@ if __name__ == "__main__":
                 if source:
                     lines.append(f"    Source: {source}")
                 if quote:
-                    # keep quote to one or two lines for readability
+                    #keep quote to one or two lines for readability
                     qshort = quote.strip().replace("\n", " ")
                     if len(qshort) > 200:
                         qshort = qshort[:197] + "..."
@@ -200,7 +216,7 @@ if __name__ == "__main__":
             lines.append("  None found")
             lines.append("")
 
-        # Relevant articles
+        #Relevant articles
         rarts = parsed.get("relevant_articles") or []
         lines.append("Relevant articles:")
         if rarts:
@@ -213,7 +229,7 @@ if __name__ == "__main__":
             lines.append("  None found")
             lines.append("")
 
-        # Note: 'sources' intentionally omitted from CLI display per user request.
+        #Note: 'sources' intentionally omitted from CLI display per user request.
         conf = parsed.get("confidence")
         if conf:
             lines.append(f"Confidence: {conf}")

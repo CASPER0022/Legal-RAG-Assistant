@@ -1,14 +1,6 @@
 [
   {
-    "user": "MY FRIEND BODYSHAMED OTHER GIRL",
-    "assistant": "{\n  \"answer\": \"Body shaming can be considered a form of harassment, but specific penalties depend on the jurisdiction and the context of the act. If it leads to emotional distress or other legal violations, there may be legal consequences.\",\n  \"legal_terms\": [],\n  \"relevant_articles\": [],\n  \"confidence\": \"low\"\n}"
-  },
-  {
-    "user": "one boy raped a girl",
-    "assistant": "{\n  \"answer\": \"The act of rape is a serious offense and is punishable with rigorous imprisonment for a term that shall not be less than ten years. The exact penalty may vary based on the circumstances of the case.\",\n  \"legal_terms\": [\n    {\n      \"term\": \"rape\",\n      \"article\": \"63\",\n      \"quote\": \"A man is said to commit 'rape' if he— (a) penetrates his penis, to any extent, into the vagina, mouth, urethra or anus of a woman...\",\n      \"source\": \"Bharatiya Nyaya Sanhita, 2023\"\n    }\n  ],\n  \"relevant_articles\": [\n    {\n      \"article\": \"10 years\",\n      \"reason\": \"The law specifies a minimum punishment of ten years for the crime of rape, highlighting the severity of the offense.\"\n    }\n  ],\n  \"confidence\": \"high\"\n}"
-  },
-  {
-    "user": "talk about albin john",
-    "assistant": "{\n  \"answer\": \"The context provided does not contain any specific information about Albin John or any related legal matters. Therefore, I cannot provide a legal analysis or penalty related to this individual.\",\n  \"legal_terms\": [],\n  \"relevant_articles\": [],\n  \"confidence\": \"low\"\n}"
+    "user": "my neighbour is throwing waste in my premises. ",
+    "assistant": "{\n  \"answer\": \"If your neighbor is throwing waste on your premises, you may seek a conditional order from a Magistrate to remove the nuisance. The penalty for causing such an obstruction can vary, but it is important to address it legally to prevent further issues.\",\n  \"legal_terms\": [\n    {\n      \"term\": \"Conditional order for removal of nuisance\",\n      \"article\": \"46\",\n      \"quote\": \"such Magistrate may make a conditional order requiring the person causing such obstruction or nuisance\",\n      \"source\": \"THE GAZETTE\"\n    }\n  ],\n  \"relevant_articles\": [\n    {\n      \"article\": \"324\",\n      \"reason\": \"This article addresses loss or damage caused by actions that may relate to the nuisance created by your neighbor.\"\n    },\n    {\n      \"article\": \"329\",\n      \"reason\": \"This article pertains to criminal trespass, which may be relevant if the waste is causing an obstruction on your property.\"\n    }\n  ],\n  \"confidence\": \"medium\"\n}"
   }
 ]
