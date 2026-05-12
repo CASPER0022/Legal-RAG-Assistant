@@ -13,7 +13,3 @@ fastapi
 uvicorn
 pydantic
 python-dotenv
-
-
-
-flashrank
