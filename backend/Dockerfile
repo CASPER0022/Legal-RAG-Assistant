@@ -14,6 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the backend files
 COPY . .
 
+# Ingest the knowledge base to build the ChromaDB vector database inside the image
+RUN python ingest.py
+
 # Expose the FastAPI default port
 EXPOSE 8000
 
