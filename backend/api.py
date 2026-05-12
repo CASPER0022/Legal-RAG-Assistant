@@ -22,6 +22,12 @@ def chat_endpoint(request: ChatRequest):
     result = generate_answer(request.query)
     return result
 
+@app.post("/api/clear")
+def clear_endpoint():
+    from output import reset_session
+    reset_session()
+    return {"status": "success", "message": "History cleared"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

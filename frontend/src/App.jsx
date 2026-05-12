@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import { Send, Scale, ChevronDown, ChevronUp, Bot, User, Loader2 } from 'lucide-react';
+import { Send, Scale, ChevronDown, ChevronUp, Bot, User, Loader2, Plus, Trash2 } from 'lucide-react';
 
 const API_URL = "http://localhost:8000/api/chat";
+const CLEAR_URL = "http://localhost:8000/api/clear";
 
 export default function App() {
   const [messages, setMessages] = useState([]);
@@ -18,6 +19,15 @@ export default function App() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleClearHistory = async () => {
+    try {
+      await axios.post(CLEAR_URL);
+      setMessages([]);
+    } catch (error) {
+      console.error("Error clearing history:", error);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,8 +71,17 @@ export default function App() {
             LegalEase
           </h1>
         </div>
-        <div className="flex-1 overflow-y-auto p-4">
-          <p className="text-sm text-gray-400 mb-4">Your elite Trial Advocate and RAG-powered Legal Assistant.</p>
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col justify-between">
+          <div>
+            <p className="text-sm text-gray-400 mb-6">Your elite Trial Advocate and RAG-powered Legal Assistant.</p>
+            <button
+              onClick={handleClearHistory}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-indigo-500/20 active:scale-[0.98] cursor-pointer"
+            >
+              <Plus size={18} />
+              New Session
+            </button>
+          </div>
           <div className="space-y-2">
              {/* Future session history could go here */}
           </div>
@@ -75,9 +94,18 @@ export default function App() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* Header (Mobile) */}
-        <div className="md:hidden flex items-center p-4 bg-gray-800 border-b border-gray-700">
-          <Scale size={20} className="text-indigo-400 mr-2" />
-          <h1 className="font-bold">LegalEase</h1>
+        <div className="md:hidden flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700">
+          <div className="flex items-center">
+            <Scale size={20} className="text-indigo-400 mr-2" />
+            <h1 className="font-bold">LegalEase</h1>
+          </div>
+          <button
+            onClick={handleClearHistory}
+            className="p-2 text-gray-400 hover:text-white active:scale-95 transition-all"
+            title="New Session"
+          >
+            <Trash2 size={20} />
+          </button>
         </div>
 
         {/* Messages */}

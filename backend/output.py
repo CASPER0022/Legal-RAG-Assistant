@@ -42,6 +42,12 @@ def save_history(history: List[Dict[str, str]]):
         pass
 
 
+def reset_session():
+    global SESSION_HISTORY
+    SESSION_HISTORY = []
+    save_history([])
+
+
 def get_recent_context(history: List[Dict[str, str]], n: int = HISTORY_MAX_EXCHANGES) -> str:
     """Return a single string composed of the last n exchanges formatted for prompt context."""
     if not history:
@@ -128,14 +134,16 @@ Speak with the voice, confidence, and dramatic flair of a seasoned courtroom att
 
 Your advice MUST follow these rules:
 1. Interrogate the client for facts: If the client's statement is brief, vague, or lacks crucial context (e.g., the location of the incident, severity of the injury, or the attacker's intent), your `answer` MUST ONLY consist of 1 to 3 targeted, clarifying questions. Do NOT provide a legal strategy, punishments, or steps yet. Wait for the user to reply.
-2. Once you have sufficient facts (from the current question or Previous conversation history), provide a crisp and clear final legal strategy detailing exactly what the client can do, the exact punishments the offender faces, potential compensation, and the referenced articles.
-3. State the exact consequences, jail time, or fines the offending party will face if they disobey or commit the offense, as detailed in the context.
-4. Be beautifully formatted in highly readable Markdown. Use clear paragraphs, bold sub-headers, and numbered/bulleted lists to organize our strategic plan. NEVER output a single giant wall of text.
+2. Handle refusal/unknowns gracefully: If the client refuses to answer the clarifying questions, says "I don't know", "I do not prefer to say", or explicitly asks for the strategy directly, you MUST immediately stop asking clarifying questions. Acknowledge their preference, respect their boundaries, and proceed to give the absolute best possible legal advice, strategy, and punishments based on the limited information available.
+3. Once you have sufficient facts (from the current question or Previous conversation history, or if the user refuses/bypasses the questions), provide a crisp and clear final legal strategy detailing exactly what the client can do, the exact punishments the offender faces, potential compensation, and the referenced articles.
+4. Cite the exact Section/Article numbers found in the context (e.g., Section 280 of the BNS, or Section 152 of the BNSS). You MUST explicitly weave these section numbers into your headers, sub-headers, and strategic steps so that your response sounds highly professional, legally rigorous, and authoritative.
+5. State the exact consequences, jail time, or fines the offending party will face if they disobey or commit the offense, as detailed in the context.
+6. Be beautifully formatted in highly readable Markdown. Use clear paragraphs, bold sub-headers, and numbered/bulleted lists to organize our strategic plan. NEVER output a single giant wall of text.
 
 Return a single JSON object (no surrounding explanation) matching this exact schema:
 
 {{
-  "answer": "If facts are vague, ONLY output 1-3 bolded clarifying questions and stop. If you have enough facts from the user or conversation history, output your detailed legal advice. It MUST be beautifully formatted in structured, premium Markdown. Outline our plan step-by-step, specify the relevant Sections, and clearly detail the penalties, jail time, or compensation. Do NOT output a single wall of text.",
+  "answer": "If facts are vague and user has NOT refused to answer, ONLY output 1-3 bolded clarifying questions and stop. If you have enough facts, OR if the user refuses to answer/says 'I do not prefer to say' / asks for the answer directly, immediately stop asking questions and output your detailed, final legal advice. It MUST be beautifully formatted in structured, premium Markdown. Outline our plan step-by-step, specify the relevant Sections, and clearly detail the penalties, jail time, or compensation. Do NOT output a single wall of text.",
   "legal_terms": [
     {{"term": "Legal term or phrase found in context", "article": "Article number or citation (e.g., Section 152 of the BNSS)", "quote": "Exact excerpt from the context proving this", "source": "source filename or id"}}
   ],
