@@ -15,7 +15,7 @@ OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "https://ollama.com/api/generate")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:120b")
 HISTORY_PATH = "chat_history.json"
 HISTORY_MAX_EXCHANGES = 3
-SESSION_HISTORY: List[Dict[str, str]] = []
+
 
 
 def load_history() -> List[Dict[str, str]]:
@@ -30,6 +30,8 @@ def load_history() -> List[Dict[str, str]]:
             return json.load(f)
     except Exception:
         return []
+
+SESSION_HISTORY: List[Dict[str, str]] = load_history()
 
 
 def save_history(history: List[Dict[str, str]]):
@@ -124,16 +126,16 @@ You are an elite, highly experienced Trial Advocate and Legal Counsel. Analyze t
 
 Speak with the voice, confidence, and dramatic flair of a seasoned courtroom attorney. Do not use generic or passive language. Speak directly to the client ("My dear client...", "We shall file...", "Under the law, we can...").
 
-Your advice MUST:
-1. State the exact, specific legal steps "we" will take on behalf of the client (e.g., filing a complaint before the Sub-divisional Magistrate).
-2. Cite the exact Section/Article numbers found in the context (e.g., Section 152 of the Bharatiya Nagarik Suraksha Sanhita (BNSS), 2023).
-3. State the exact consequences, jail time, or fines the offending party will face if they disobey or commit the offense, as detailed in the context (e.g., liability under Section 223 of the Bharatiya Nyaya Sanhita (BNS), 2023, or imprisonment up to 6 months under Section 293 of the BNS).
+Your advice MUST follow these rules:
+1. Interrogate the client for facts: If the client's statement is brief, vague, or lacks crucial context (e.g., the location of the incident, severity of the injury, or the attacker's intent), your `answer` MUST ONLY consist of 1 to 3 targeted, clarifying questions. Do NOT provide a legal strategy, punishments, or steps yet. Wait for the user to reply.
+2. Once you have sufficient facts (from the current question or Previous conversation history), provide a crisp and clear final legal strategy detailing exactly what the client can do, the exact punishments the offender faces, potential compensation, and the referenced articles.
+3. State the exact consequences, jail time, or fines the offending party will face if they disobey or commit the offense, as detailed in the context.
 4. Be beautifully formatted in highly readable Markdown. Use clear paragraphs, bold sub-headers, and numbered/bulleted lists to organize our strategic plan. NEVER output a single giant wall of text.
 
 Return a single JSON object (no surrounding explanation) matching this exact schema:
 
 {{
-  "answer": "Your detailed legal advice, written with the authoritative, assertive tone of an advocate. It MUST be beautifully formatted in structured, premium Markdown with clear line breaks, bold headings (e.g., ### Strategy), and clean bullet points. Outline our plan step-by-step, specify the relevant Sections, and clearly detail the penalties, jail time, or fines. Do NOT output a single wall of text.",
+  "answer": "If facts are vague, ONLY output 1-3 bolded clarifying questions and stop. If you have enough facts from the user or conversation history, output your detailed legal advice. It MUST be beautifully formatted in structured, premium Markdown. Outline our plan step-by-step, specify the relevant Sections, and clearly detail the penalties, jail time, or compensation. Do NOT output a single wall of text.",
   "legal_terms": [
     {{"term": "Legal term or phrase found in context", "article": "Article number or citation (e.g., Section 152 of the BNSS)", "quote": "Exact excerpt from the context proving this", "source": "source filename or id"}}
   ],
@@ -213,7 +215,19 @@ Important: If an article number, section number, or penalty is not present in th
     m = re.search(r'"answer"\s*:\s*"([\s\S]*?)"\s*(?:,"legal_terms"|,"relevant_articles"|,"confidence"|\})', answer_text)
     if m:
         extracted = m.group(1).replace('\\n', '\n').replace('\\"', '"')
-        return {"answer": extracted, "confidence": "low (parse error)", "legal_terms": [], "relevant_articles": []}
+        
+        # Try to extract the actual confidence score from the broken JSON
+        confidence_val = "medium"
+        conf_m = re.search(r'"confidence"\s*:\s*"(\w+)"', answer_text)
+        if conf_m:
+            confidence_val = conf_m.group(1)
+            
+        return {
+            "answer": extracted,
+            "confidence": confidence_val,
+            "legal_terms": [],
+            "relevant_articles": []
+        }
 
     # complete fallback: return raw text under a key
     return {"answer_text": answer_text}

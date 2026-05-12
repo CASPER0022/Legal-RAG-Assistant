@@ -237,16 +237,6 @@ function AssistantResponse({ raw, fallbackContent }) {
         </div>
       )}
 
-      {/* Footer / Confidence */}
-      <div className="flex items-center justify-between pt-4 mt-6 border-t border-gray-800/50">
-         <span className={`text-xs px-2 py-1 rounded-full ${
-           confidence === 'high' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
-           confidence === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
-           'bg-red-500/10 text-red-400 border border-red-500/20'
-         }`}>
-           Confidence: {confidence.toUpperCase()}
-         </span>
-      </div>
     </div>
   );
 }
