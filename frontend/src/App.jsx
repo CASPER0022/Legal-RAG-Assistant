@@ -3,8 +3,9 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { Send, Scale, ChevronDown, ChevronUp, Bot, User, Loader2, Plus, Trash2 } from 'lucide-react';
 
-const API_URL = "http://localhost:8000/api/chat";
-const CLEAR_URL = "http://localhost:8000/api/clear";
+const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const API_URL = `${BACKEND_BASE}/api/chat`;
+const CLEAR_URL = `${BACKEND_BASE}/api/clear`;
 
 export default function App() {
   const [messages, setMessages] = useState([]);
